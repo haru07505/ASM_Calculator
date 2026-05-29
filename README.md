@@ -65,7 +65,7 @@ Ví dụ `12` đổi được, `12.50` sẽ báo lỗi.
 ## 2. Các Tools Cần Cài Đặt
 
 Thực hiện cài đặt các tools cần thiết theo hướng dẫn trong link:
-https://docs.google.com/document/d 1a9Ime46792JdFs4ki_Jkx0VcFtgslIrb8R9GuBjVaTQ/edit?tab=t.0
+https://docs.google.com/document/d/1a9Ime46792JdFs4ki_Jkx0VcFtgslIrb8R9GuBjVaTQ/edit?usp=sharing
 
 ## 3. Cấu trúc thư mục
 
