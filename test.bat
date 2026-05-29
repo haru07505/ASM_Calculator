@@ -1,30 +1,53 @@
 @echo off
 
-echo ADD:
-calculator.exe 1250 + 320
+echo DEC real: 10.5 + 2.25
+(
+echo 1
+echo 1
+echo 10.5
+echo 2.25
+echo 0
+echo 0
+) | calculator.exe
 
-echo SUB:
-calculator.exe 1250 - 320
+echo HEX integer: A + 2, then convert result to BIN
+(
+echo 2
+echo 1
+echo A
+echo 2
+echo 2
+echo 3
+echo 0
+echo 0
+) | calculator.exe
 
-echo MUL:
-calculator.exe 1250 * 200
+echo BIN integer: 1010 AND 0011
+(
+echo 3
+echo 5
+echo 1010
+echo 0011
+echo 0
+echo 0
+) | calculator.exe
 
-echo DIV:
-calculator.exe 1250 / 200
+echo DEC integer conversion: -10 to HEX
+(
+echo 4
+echo 1
+echo -10
+echo 0
+echo 0
+) | calculator.exe
 
-echo MOD:
-calculator.exe 1000 %% 300
-
-echo NEGATE:
-calculator.exe 1250 n 0
-
-echo SQUARE:
-calculator.exe 500 s 0
-
-echo RECIPROCAL:
-calculator.exe 200 r 0
-
-echo DIV ZERO:
-calculator.exe 1250 / 0
+echo HEX two's complement conversion: FFFFFFF6 to DEC
+(
+echo 4
+echo 3
+echo FFFFFFF6
+echo 0
+echo 0
+) | calculator.exe
 
 pause

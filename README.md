@@ -1,218 +1,292 @@
-# Máy Tính Bỏ Túi Sử Dụng Assembly NASM
+# ASM Console Calculator
 
-## 1. Mục tiêu
+## 1. Tổng quan đề tài
 
-Đề tài xây dựng một ứng dụng máy tính bỏ túi với phần xử lý phép toán được viết bằng Assembly NASM x64. Giao diện người dùng được xây dựng bằng Python, còn C đóng vai trò trung gian để gọi hàm Assembly.
+Đề tài xây dựng một chương trình máy tính chạy trên console bằng NASM x64
+trên Windows. Assembly được dùng để điều hướng menu, đọc input, parse số, thực hiện phép tính, chuyển đổi hệ số và format kết quả.
 
-Mục tiêu chính:
+Chương trình hỗ trợ ba chế độ chính:
 
-* Vận dụng kiến thức Kiến trúc máy tính và Hợp ngữ.
-* Sử dụng thanh ghi và lệnh Assembly trong xử lý số học.
-* Kết hợp Assembly với ngôn ngữ bậc cao để xây dựng ứng dụng hoàn chỉnh.
-* Xử lý lỗi và điều hướng chương trình bằng lệnh nhảy.
+- `DEC - Số thực`: xử lý số thực bằng fixed-point với `SCALE = 100`.
+- `HEX - Số nguyên`: xử lý số nguyên 32-bit theo bù 2.
+- `BIN - Số nguyên`: xử lý số nguyên 32-bit theo bù 2.
 
-Các chức năng chính:
+Menu chính:
 
-* Cộng `+`
-* Trừ `-`
-* Nhân `*`
-* Chia `/`
-* Chia lấy dư `%`
-* Đổi dấu `±`
-* Bình phương `x²`
-* Nghịch đảo `1/x`
+```text
+1. DEC - So thuc
+2. HEX - So nguyen
+3. BIN - So nguyen
+4. Chuyen doi he so
+0. Thoat
+```
 
----
+Chức năng DEC:
 
-## 2. Cấu trúc project
+- Cộng
+- Trừ
+- Nhân
+- Chia
+- Đổi dấu
+- Bình phương
+- Nghịch đảo
+
+Chức năng HEX/BIN:
+
+- Cộng
+- Trừ
+- Nhân
+- Chia
+- AND
+- OR
+- XOR
+- NOT
+
+Quy ước hiển thị HEX/BIN:
+
+- HEX luôn hiển thị 8 ký tự, ví dụ `-10` thành `FFFFFFF6`.
+- BIN luôn hiển thị 32 bit, ví dụ `-10` thành
+  `11111111111111111111111111110110`.
+- Khi chuyển HEX/BIN về DEC, chương trình hiểu giá trị theo signed 32-bit
+  two's complement.
+
+Sau khi tính xong, chương trình lưu kết quả gần nhất và cho phép:
+
+```text
+1. Tiep tuc tinh voi ket qua nay
+2. Doi ket qua sang he khac
+3. Lam phep tinh moi
+0. Menu chinh
+```
+
+Ghi chú: kết quả DEC số thực chỉ đổi sang HEX/BIN nếu không có phần lẻ.
+Ví dụ `12` đổi được, `12.50` sẽ báo lỗi.
+
+## 2. Các Tools Cần Cài Đặt
+
+Thực hiện cài đặt các tools cần thiết theo hướng dẫn trong link:
+https://docs.google.com/document/d 1a9Ime46792JdFs4ki_Jkx0VcFtgslIrb8R9GuBjVaTQ/edit?tab=t.0
+
+## 3. Cấu trúc thư mục
 
 ```text
 Calculator/
-│
-├── calc_core.asm
-├── basic_ops.asm
-├── mul_div_ops.asm
-├── advanced_ops.asm
-│
-├── main.c
-├── gui.py
-├── build.bat
-├── test.bat
-└── README.md
+|-- main.asm
+|-- app.asm
+|-- state.asm
+|-- console_io.asm
+|-- menus.asm
+|-- parser.asm
+|-- formatter.asm
+|-- result_output.asm
+|-- dec_ops.asm
+|-- int_ops.asm
+|-- bit_ops.asm
+|-- convert.asm
+|-- constants.inc
+|-- build.bat
+|-- test.bat
+`-- README.md
 ```
 
----
+## 4. Giải thích từng file
 
-## 3. Giải thích từng phần
+`main.asm`
 
-### `calc_core.asm`
+File khởi động chương trình. File này gọi `init_console`, sau đó chuyển vào
+`program_loop`, cuối cùng gọi `ExitProcess` để thoát chương trình.
 
-Đóng vai trò điều phối phép toán. File này kiểm tra ký hiệu phép toán và gọi đến hàm Assembly tương ứng.
+`app.asm`
 
-Ví dụ:
+File điều phối luồng chạy chính của chương trình. File này quản lý menu
+chính, menu DEC, menu HEX/BIN, menu sau khi có kết quả, và gọi các hàm tính
+tương ứng.
+
+`state.asm`
+
+Chứa các biến dùng chung như chế độ hiện tại, hệ số hiện tại, toán hạng,
+kết quả phép tính, kết quả gần nhất và trạng thái chuyển đổi.
+
+`console_io.asm`
+
+Phụ trách nhập/xuất console. File này gọi một số Windows API tối thiểu:
+`GetStdHandle`, `ReadFile`, `WriteFile`. Các API này chỉ dùng để đọc input
+và in output, không xử lý logic phép tính.
+
+`menus.asm`
+
+Chứa nội dung các menu, thông báo lỗi, chuỗi hiển thị và ký hiệu phép tính
+như `+`, `-`, `*`, `/`, `AND`, `OR`, `XOR`.
+
+`parser.asm`
+
+Chuyển input dạng chuỗi thành số. File này parse DEC số thực fixed-point,
+DEC số nguyên, HEX số nguyên và BIN số nguyên.
+
+`formatter.asm`
+
+Chuyển giá trị số thành chuỗi để in ra console. File này format DEC,
+fixed-point DEC, HEX 32-bit và BIN 32-bit.
+
+`result_output.asm`
+
+In biểu thức và kết quả theo dạng rõ ràng, ví dụ:
 
 ```text
-+  → asm_add
-*  → asm_mul
-r  → asm_reciprocal
+10.50 + 2.25 = 12.75
+0000000A + 00000002 = 0000000C
 ```
 
----
+`dec_ops.asm`
 
-### `basic_ops.asm`
+Chứa các phép tính DEC số thực fixed-point: cộng, trừ, nhân, chia, đổi dấu,
+bình phương và nghịch đảo.
 
-Chứa các phép toán cơ bản:
+`int_ops.asm`
 
-* Cộng `+`
-* Trừ `-`
-* Đổi dấu `±`
+Chứa các phép tính số nguyên 32-bit: cộng, trừ, nhân và chia.
 
-Các lệnh chính sử dụng:
+`bit_ops.asm`
 
-```text
-MOV
-ADD
-SUB
-NEG
-```
+Chứa các phép toán bit 32-bit: AND, OR, XOR và NOT.
 
----
+`convert.asm`
 
-### `mul_div_ops.asm`
+Quản lý menu chuyển đổi hệ số và chuyển đổi kết quả gần nhất sang DEC, HEX
+hoặc BIN.
 
-Chứa các phép toán:
+`constants.inc`
 
-* Nhân `*`
-* Chia `/`
-* Chia lấy dư `%`
+Chứa các hằng số dùng chung, ví dụ `BASE_DEC`, `BASE_HEX`, `BASE_BIN`,
+`TYPE_FIXED`, `TYPE_INT`, `MAX_INPUT`.
 
-Các lệnh chính sử dụng:
+`build.bat`
 
-```text
-IMUL
-IDIV
-CQO
-CMP
-```
+Assemble từng file `.asm` thành `.obj`, sau đó link với `kernel32` để tạo
+`calculator.exe`.
 
-Ngoài ra file này còn xử lý lỗi chia cho 0.
+`test.bat`
 
----
+Chạy nhanh một số test case mẫu để kiểm tra DEC, HEX, BIN và chuyển đổi hệ
+số.
 
-### `advanced_ops.asm`
+## 5. Phân chia công việc
 
-Chứa các phép toán nâng cao:
+Thành viên 1: DEC số thực
 
-* Bình phương `x²`
-* Nghịch đảo `1/x`
+Phạm vi chính: các phép tính ở chế độ DEC số thực fixed-point.
 
-File này sử dụng kỹ thuật fixed-point để xử lý số thực trong Assembly.
+Các file và hàm/label cần phụ trách:
 
----
+- `menus.asm`
+  - `msg_dec_menu`: nội dung menu DEC.
+  - `show_dec_menu`: in menu DEC ra console.
 
-### `main.c`
+- `app.asm`
+  - `.dec_new`: khởi tạo chế độ DEC.
+  - `.dec_continue`: tiếp tục tính với kết quả DEC trước đó.
+  - `.dec_menu`: đọc lựa chọn phép tính DEC.
+  - `.dec_check_binary`: xác định phép toán cần một hay hai toán hạng.
+  - `.dec_compute`: gọi hàm tính toán DEC.
+  - `.store_fixed_result`: lưu kết quả DEC gần nhất.
+  - `call_dec_selected`: điều hướng lựa chọn menu đến hàm trong `dec_ops.asm`.
 
-Đóng vai trò trung gian giữa hệ điều hành và Assembly.
+- `dec_ops.asm`
+  - `dec_add`: cộng fixed-point.
+  - `dec_sub`: trừ fixed-point.
+  - `dec_mul`: nhân fixed-point, sau đó chia lại cho `SCALE`.
+  - `dec_div`: chia fixed-point, có kiểm tra chia cho 0.
+  - `dec_neg`: đổi dấu.
+  - `dec_square`: bình phương.
+  - `dec_reciprocal`: nghịch đảo `1/x`.
 
-Nhiệm vụ:
+- `parser.asm`
+  - `read_fixed_value`: đọc input DEC số thực.
+  - `parse_fixed`: chuyển chuỗi như `10.50` thành giá trị scaled `1050`.
 
-* Nhận tham số command line.
-* Gọi hàm `calc`.
-* Nhận kết quả từ Assembly.
-* In kết quả hoặc mã lỗi.
+- `formatter.asm`
+  - `format_fixed`: chuyển giá trị scaled về dạng hiển thị, ví dụ `1275`
+    thành `12.75`.
 
----
+Thành viên 2: HEX/BIN số nguyên và phép bit
 
-### `gui.py`
+Phạm vi chính: các phép tính số nguyên ở chế độ HEX/BIN và các phép bit.
 
-Xây dựng giao diện bằng Python Tkinter.
+Các file và hàm/label cần phụ trách:
 
-Nhiệm vụ:
+- `menus.asm`
+  - `msg_hex_menu`: nội dung menu HEX.
+  - `msg_bin_menu`: nội dung menu BIN.
+  - `show_hex_menu`: in menu HEX ra console.
+  - `show_bin_menu`: in menu BIN ra console.
 
-* Nhập dữ liệu từ người dùng.
-* Gọi `calculator.exe`.
-* Hiển thị kết quả.
+- `app.asm`
+  - `.hex_new`: khởi tạo chế độ HEX.
+  - `.hex_continue`: tiếp tục tính với kết quả HEX trước đó.
+  - `.bin_new`: khởi tạo chế độ BIN.
+  - `.bin_continue`: tiếp tục tính với kết quả BIN trước đó.
+  - `.int_menu`: chọn menu HEX hoặc BIN.
+  - `.read_int_menu`: đọc lựa chọn phép tính HEX/BIN.
+  - `.int_check_binary`: xác định `NOT` là phép một toán hạng.
+  - `.int_compute`: gọi hàm tính toán số nguyên hoặc phép bit.
+  - `.store_int_result`: lưu kết quả HEX/BIN gần nhất.
+  - `call_int_selected`: điều hướng lựa chọn menu đến `int_ops.asm`
+    hoặc `bit_ops.asm`.
 
-Python không trực tiếp xử lý phép toán chính, mà Assembly là phần xử lý cốt lõi của chương trình.
+- `int_ops.asm`
+  - `int_add`: cộng số nguyên 32-bit.
+  - `int_sub`: trừ số nguyên 32-bit.
+  - `int_mul`: nhân số nguyên 32-bit.
+  - `int_div`: chia số nguyên 32-bit, có kiểm tra chia cho 0.
 
----
+- `bit_ops.asm`
+  - `bit_and`: phép AND bit.
+  - `bit_or`: phép OR bit.
+  - `bit_xor`: phép XOR bit.
+  - `bit_not`: phép NOT bit.
 
-### `build.bat`
+- `formatter.asm`
+  - `format_int`: format HEX/BIN theo bù 2 32-bit.
 
-Dùng để build project:
+Thành viên 3: Nhập/xuất, parse/format và chuyển đổi hệ số
 
-```text
-ASM → OBJ → EXE
-```
+Phạm vi chính: khởi động chương trình, nhập/xuất console, parse/format số,
+state dùng chung và chuyển đổi hệ số.
 
-Lệnh chính:
+Các file và hàm/label cần phụ trách:
 
-```bat
-nasm -f win64 ...
-gcc ...
-```
+- `main.asm`
+  - `mainCRTStartup`: entry point của chương trình.
 
----
+- `console_io.asm`
+  - `init_console`: lấy handle input/output console.
+  - `print_z`: in chuỗi kết thúc bằng byte `0`.
+  - `read_input`: đọc một dòng input từ console.
 
-### `test.bat`
+- `parser.asm`
+  - `read_choice`: đọc lựa chọn menu.
+  - `read_int_value_current_base`: đọc số nguyên theo hệ hiện tại.
+  - `parse_int`: parse DEC/HEX/BIN số nguyên.
 
-Dùng để kiểm tra nhanh các phép toán sau khi build.
+- `formatter.asm`
+  - `format_current_value`: chọn format theo chế độ hiện tại.
+  - `format_int`: format DEC/HEX/BIN số nguyên.
+  - `get_base_name`: lấy tên hệ số `DEC`, `HEX`, `BIN`.
 
-Ví dụ:
+- `convert.asm`
+  - `run_conversion_menu`: menu chuyển đổi hệ số.
+  - `print_conversion_result`: in kết quả chuyển đổi.
+  - `show_result_conversion`: đổi kết quả gần nhất sang hệ khác.
 
-```bat
-calculator.exe 1250 + 320
-calculator.exe 1250 / 200
-```
+- `state.asm`
+  - `current_type`: kiểu hiện tại, ví dụ DEC fixed-point hoặc INT.
+  - `current_base`: hệ số hiện tại.
+  - `op_a`, `op_b`, `op_result`: toán hạng và kết quả.
+  - `has_result`, `last_result`, `last_type`, `last_base`: thông tin kết
+    quả gần nhất.
+  - `conv_src_base`, `conv_dst_base`: hệ nguồn và hệ đích khi chuyển đổi.
 
----
-
-## 4. Kỹ thuật fixed-point
-
-Để xử lý số thực trong Assembly, chương trình sử dụng kỹ thuật fixed-point với:
-
-```text
-SCALE = 100
-```
-
-Ví dụ:
-
-```text
-12.50 → 1250
-3.20  → 320
-```
-
-Sau khi tính toán, kết quả sẽ được chuyển ngược về dạng số thực để hiển thị trên giao diện.
-
----
-
-## 5. Hướng dẫn cài đặt tools cần thiết
-
-Thực hiện theo hướng dẫn trong link:
-https://docs.google.com/document/d/1a9Ime46792JdFs4ki_Jkx0VcFtgslIrb8R9GuBjVaTQ/edit?usp=sharing
-
-Giao diện được thiết kế bằng customtkinter, nên cần cài thư viện:
-
-```bat
-pip install customtkinter
-```
-
-## 6. Cách build và chạy
-
-### Build project
-
-```bat
-build.bat
-```
-
-### Test bằng terminal
-
-```bat
-calculator.exe 1250 + 320
-```
-
-### Chạy giao diện
-
-```bat
-python gui.py
-```
+- `result_output.asm`
+  - `print_binary_result`: in biểu thức hai toán hạng.
+  - `print_unary_result`: in biểu thức một toán hạng như `NOT`, đổi dấu,
+    bình phương hoặc nghịch đảo.

@@ -1,0 +1,14 @@
+%ifndef CONSTANTS_INC
+%define CONSTANTS_INC
+
+STD_INPUT_HANDLE  equ -10
+STD_OUTPUT_HANDLE equ -11
+
+MAX_INPUT  equ 128
+TYPE_FIXED equ 1
+TYPE_INT   equ 2
+BASE_BIN   equ 2
+BASE_DEC   equ 10
+BASE_HEX   equ 16
+
+%endif
